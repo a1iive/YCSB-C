@@ -22,17 +22,17 @@ typedef void* OBJ;
 
 #define MAX_MAP_SIZE 200
 
-typedef struct {
+struct HistogramBucketMapper{
     uint64_t bucketValues_[MAX_MAP_SIZE];
     uint64_t size_;
     uint64_t maxBucketValue_;
     uint64_t minBucketValue_;
-} HistogramBucketMapper;
+};
 
 int CreateHistogramBucketMapper(HistogramBucketMapper* mapper);
 void DeleteHistogramBucketMapper(HistogramBucketMapper* mapper);
 
-typedef struct {
+struct HistogramStat{
     HistogramBucketMapper bucketMapper_;
 
     atomic<uint64_t> min_;
@@ -42,12 +42,12 @@ typedef struct {
     atomic<uint64_t> sum_squares_;
     atomic<uint64_t> buckets_[MAX_MAP_SIZE]; // 109==BucketMapper::BucketCount()
     uint64_t num_buckets_;
-} HistogramStat;
+};
 
 int CreateHistogramStat(HistogramStat* stat);
 void DeleteHistogramStat(HistogramStat* stat);
 
-typedef struct {
+struct HistogramInterface{
     void (*Clear)(OBJ impl);
     int (*Empty)(OBJ impl);
     void (*Add)(OBJ impl, uint64_t value);
@@ -57,14 +57,14 @@ typedef struct {
     double (*Percentile)(OBJ impl, double p);
     double (*Average)(OBJ impl);
     double (*StandardDeviation)(OBJ impl);
-} HistogramInterface;
+};
 
-typedef struct{
+struct HistogramImpl{
     bool init_;
     HistogramStat stats_;
     // lock_t lock_;
     HistogramInterface interface;
-} HistogramImpl;
+};
 
 int CreateHistogramImpl(HistogramImpl *histogram_impl);
 void DeleteHistogramImpl(HistogramImpl *histogram_impl);
