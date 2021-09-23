@@ -1,5 +1,5 @@
 //
-// Created by wujy on 1/23/19.
+// Created by hhs on 9/23/2021.
 //
 #include <iostream>
 #include <sstream>
@@ -29,9 +29,12 @@ namespace ycsbc {
 
         session_nums_ = stoi(props.GetProperty("threadcount", "1"));
         session_ = new WT_SESSION *[session_nums_];
+        cursor_ = new WT_CURSOR *[session_nums_];
         for (int i = 0; i < session_nums_; i++){
             conn_->open_session(conn_, NULL, NULL, &(session_[i]));
             assert(session_[i] != NULL);
+            session_[i]->open_cursor(session_[i], uri_.c_str(), NULL, NULL, &cursor_[i]);
+            assert(cursor_[i] != NULL);
         }
     }
 
@@ -49,22 +52,21 @@ namespace ycsbc {
         conn_config << "create";
 
         // string direct_io = ",direct_io=[data]"; // [data, log, checkpoint]
-        // conn_config += direct_io;
+        // conn_config << ",direct_io=[data]";
 
         conn_config << ",cache_size=";
         conn_config << cache_size;
 
-        conn_config << ",eviction=(threads_max=4)";
-        conn_config << ",transaction_sync=(enabled=true)";
-
         // string checkpoint = ",checkpoint=(wait=60,log_size=2G)";
-        // conn_config += checkpoint;
+        // conn_config << ",checkpoint=(wait=60,log_size=2G)";
 
         // string extensions = ",extensions=[/usr/local/lib/libwiredtiger_snappy.so]";
         // conn_config += extensions;
 
         // string log = ",log=(archive=false,enabled=true,path=journal,compressor=snappy)"; // compressor = "lz4", "snappy", "zlib" or "zstd" // 需要重新Configuring WiredTiger
         conn_config << ",log=(enabled=true,file_max=128MB)";
+       
+        // conn_config << ",transaction_sync=(enabled=true,method=fsync)";
 
         conn_config << ",statistics=(all)"; // all, fast
         cout << "Connect Config: " << conn_config.str() << endl;
@@ -98,15 +100,8 @@ namespace ycsbc {
     //                   std::vector<KVPair> &result) {return DB::kOK;}
     int WiredTiger::Read(const std::string &table, const std::string &key, const std::vector<std::string> *fields,
                       std::vector<KVPair> &result, int nums) {
-        WT_CURSOR *cursor;
-        int ret = session_[nums]->open_cursor(session_[nums], uri_.c_str(), NULL, NULL, &cursor);
-        if (ret != 0) {
-            fprintf(stderr, "open_cursor error: %s\n", wiredtiger_strerror(ret));
-            exit(1);
-        }
-        cursor->set_key(cursor, key.c_str());
-        ret = cursor->search(cursor);
-        cursor->close(cursor);
+        cursor_[nums]->set_key(cursor_[nums], key.c_str());
+        int ret = cursor_[nums]->search(cursor_[nums]);
         if(!ret){
             return DB::kOK;
         }else if(ret == WT_NOTFOUND){
@@ -122,22 +117,17 @@ namespace ycsbc {
     //                   std::vector<std::vector<KVPair>> &result) {return DB::kOK;}
     int WiredTiger::Scan(const std::string &table, const std::string &key, const std::string &max_key, int len, const std::vector<std::string> *fields,
                       std::vector<std::vector<KVPair>> &result, int nums) {
-        WT_CURSOR *cursor;
-        int ret = session_[nums]->open_cursor(session_[nums], uri_.c_str(), NULL, NULL, &cursor);
-        if (ret != 0) {
-            fprintf(stderr, "open_cursor error: %s\n", wiredtiger_strerror(ret));
-            exit(1);
-        }
-        cursor->set_key(cursor, key.c_str());
+        cursor_[nums]->set_key(cursor_[nums], key.c_str());
+        int exact = 0;
+        cursor_[nums]->search_near(cursor_[nums], &exact);
         int i = 0;
-        while (i < len && cursor->next(cursor) == 0) {
+        while (i < len && cursor_[nums]->next(cursor_[nums]) == 0) {
             i++;
             const char *key1;
-            cursor->get_key(cursor, &key1);
+            cursor_[nums]->get_key(cursor_[nums], &key1);
             string key2 = key1;
             if(key2 >= key) break;
         }
-        cursor->close(cursor);
         return DB::kOK;
     }
 
@@ -145,23 +135,15 @@ namespace ycsbc {
     //                     std::vector<KVPair> &values) {return DB::kOK;}
     int WiredTiger::Insert(const std::string &table, const std::string &key,
                         std::vector<KVPair> &values, int nums){
-        WT_CURSOR *cursor;
-        int ret = session_[nums]->open_cursor(session_[nums], uri_.c_str(), NULL, NULL, &cursor);
-        if (ret != 0) {
-            fprintf(stderr, "open_cursor error: %s\n", wiredtiger_strerror(ret));
-            exit(1);
-        }
-
         string value = values.at(0).second;
 
-        cursor->set_key(cursor, key.c_str());
-        cursor->set_value(cursor, value.c_str());
-        ret = cursor->insert(cursor);
+        cursor_[nums]->set_key(cursor_[nums], key.c_str());
+        cursor_[nums]->set_value(cursor_[nums], value.c_str());
+        int ret = cursor_[nums]->insert(cursor_[nums]);
         if (ret != 0) {
           fprintf(stderr, "set error: %s\n", wiredtiger_strerror(ret));
           exit(1);
         }
-        cursor->close(cursor);
         return DB::kOK;
     }
 
@@ -174,20 +156,14 @@ namespace ycsbc {
 
     // int WiredTiger::Delete(const std::string &table, const std::string &key) {return DB::kOK;}
     int WiredTiger::Delete(const std::string &table, const std::string &key, int nums) {
-        WT_CURSOR *cursor;
-        int ret = session_[nums]->open_cursor(session_[nums], uri_.c_str(), NULL, NULL, &cursor);
-        if (ret != 0) {
-            fprintf(stderr, "open_cursor error: %s\n", wiredtiger_strerror(ret));
-            exit(1);
-        }
-        cursor->set_key(cursor, key.c_str());
-        if ((ret = cursor->remove(cursor)) != 0) {
+        int ret = 0;
+        cursor_[nums]->set_key(cursor_[nums], key.c_str());
+        if ((ret = cursor_[nums]->remove(cursor_[nums])) != 0) {
           if (nums == 1 || ret != WT_NOTFOUND) {
             fprintf(stderr, "del error: key %s %s\n", key.c_str(), wiredtiger_strerror(ret));
             exit(1);
           }
         }
-        cursor->close(cursor);
         return DB::kOK;
     }
 
@@ -203,25 +179,75 @@ namespace ycsbc {
         }
     }
 
+    void get_stat(WT_CURSOR *cursor, int stat_field, int64_t *valuep)
+    {
+        const char *desc, *pvalue;
+
+        cursor->set_key(cursor, stat_field);
+        cursor->search(cursor);
+        cursor->get_value(cursor, &desc, &pvalue, valuep);
+    }
+
     void WiredTiger::PrintStats() {
         if(noResult) cout<<"read not found:"<<noResult<<endl;
-        char stats[1024];
-        memset(stats, 0, 1024);
-        // statistics must be set
+        // char stats[1024];
+        // memset(stats, 0, 1024);
+        // statistics must be set in connection Option
         WT_CURSOR *cursor;
+        WT_SESSION *session;
         std::stringstream suri;
-        suri.str("");
-        suri << "statistics:session" << uri_;
-        for(int i = 0; i < session_nums_; i++){
-            int ret = session_[i]->open_cursor(session_[i], suri.str().c_str(), NULL, "statistics=(all,clear)", &cursor);
-            if (ret != 0) {
-                fprintf(stderr, "open_cursor error: %s\n", wiredtiger_strerror(ret));
-                exit(1);
+        {
+            suri.str("");
+            suri << "statistics:session";
+            for(int i = 0; i < session_nums_; i++){
+                int ret = session_[i]->open_cursor(session_[i], suri.str().c_str(), NULL, "statistics=(all,clear)", &cursor);
+                if (ret != 0) {
+                    fprintf(stderr, "open_cursor error: %s\n", wiredtiger_strerror(ret));
+                    exit(1);
+                }
+                printf("------ Session %d stats ------\n", i);
+                print_cursor(cursor);  
+                cursor->close(cursor); 
             }
-            printf("------ Session %d stats ------", i);
-            print_cursor(cursor);   
         }
-        cout<<stats<<endl;
+        {
+            /*! [statistics calculate write amplification] */
+            printf("------------------------------\n");
+            suri.str("");
+            suri << "statistics:" << uri_;
+            conn_->open_session(conn_, NULL, NULL, &(session));
+            session->open_cursor(session, suri.str().c_str(), NULL, NULL, &cursor);
+            int64_t app_insert, app_remove, app_update, fs_writes, log_writes;
+
+            get_stat(cursor, WT_STAT_DSRC_CURSOR_INSERT_BYTES, &app_insert);
+            get_stat(cursor, WT_STAT_DSRC_CURSOR_REMOVE_BYTES, &app_remove);
+            get_stat(cursor, WT_STAT_DSRC_CURSOR_UPDATE_BYTES, &app_update);
+
+            get_stat(cursor, WT_STAT_DSRC_CACHE_BYTES_WRITE, &fs_writes);
+	        get_stat(cursor, WT_STAT_CONN_LOG_BYTES_WRITTEN, &log_writes);
+
+            if ((app_insert + app_remove + app_update) != 0) {
+                printf("Write amplification is %.2lf\n" \
+                "Real write_size:%.3f MB  Op write_size:%.3f MB\n" \
+		        "Log write_size:%.3f MB\n", \
+                (double)fs_writes / (app_insert + app_remove + app_update), \
+                1.0 * fs_writes / (1024 * 1024), \
+                1.0 * (app_insert + app_remove + app_update) / (1024 * 1024), \
+		        1.0 * log_writes / (1024 * 1024));
+            }
+	        printf("------------------------------\n");
+            cursor->close(cursor);
+            /*! [statistics calculate write amplification] */
+        }
+        {
+            suri.str("");
+            suri << "statistics:" ;
+            session->open_cursor(session, suri.str().c_str(), NULL, NULL, &cursor);
+            print_cursor(cursor);
+            cursor->close(cursor); 
+        }
+        session->close(session, NULL);
+        // cout<<stats<<endl;
     }
 
 
