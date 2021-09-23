@@ -41,6 +41,7 @@ namespace ycsbc {
         uint32_t key_len = stoi(props.GetProperty(CoreWorkload::KEY_LENGTH));
         uint32_t value_len = stoi(props.GetProperty(CoreWorkload::FIELD_LENGTH_PROPERTY));
         uint32_t cache_size = nums * (key_len + value_len) * 10 / 100;
+        cache_size = max(cache_size, 1u * 1024 * 1024);
 
         std::stringstream conn_config;
         conn_config.str("");

@@ -26,8 +26,9 @@ ROCKSDB_OBJECTS=$(ROCKSDB_SOURCES:.cc=.o)
 ##
 
 ##wiredtiger
+WIREDTIGER_FLAGS= -I/home/hhs/hwdb/wiredtiger/build/include
 WIREDTIGER_SOURCES= db/wiredtiger_db.cc
-WIREDTIGER_LIBRARY= /home/hhs/hwdb/wiredtiger/build/libwiredtiger.so
+WIREDTIGER_LIBRARY= /home/hhs/hwdb/wiredtiger/build/lib/libwiredtiger.a -ldl
 WIREDTIGER_DEFS= -DYCSB_WIREDTIGER
 WIREDTIGER_OBJECTS=$(WIREDTIGER_SOURCES:.cc=.o)
 ##
