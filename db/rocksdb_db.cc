@@ -29,7 +29,7 @@ namespace ycsbc {
         //// 默认的Rocksdb配置
         options->create_if_missing = true;
         options->compression = rocksdb::kNoCompression;
-        //options->enable_pipelined_write = true;
+        options->enable_pipelined_write = true;
 
         options->max_background_jobs = 2;
         // options->max_background_compactions = 1;
@@ -54,11 +54,11 @@ namespace ycsbc {
             cache_size = 8 << 20;
         }
         cache_ = rocksdb::NewLRUCache(cache_size);
-        if(options->table_factory->GetOptions() != nullptr){
-            rocksdb::BlockBasedTableOptions* table_options = reinterpret_cast<rocksdb::BlockBasedTableOptions*>(options->table_factory->GetOptions());
-            table_options->block_cache = cache_;
-            table_options->filter_policy.reset(rocksdb::NewBloomFilterPolicy(10,false));
-        }
+        rocksdb::BlockBasedTableOptions table_options;
+        table_options.block_cache = cache_;
+        table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
+        // table_options.optimize_filters_for_memory = true;
+        options->table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
 
         bool statistics = utils::StrToBool(props["dbstatistics"]);
         if(statistics){
