@@ -10,7 +10,7 @@ extern "C"{
 #endif /* __cplusplus */
 
 //用c方式编译的代码
-#include <hwdb/hwdb.h>   //hwdb的头文件，最好放在 /usr/local/include/ 下，
+#include <hwdb.h>   //hwdb的头文件，最好放在 /usr/local/include/ 下，
 
 #ifdef __cplusplus
 }
@@ -48,8 +48,6 @@ namespace ycsbc {
         int Delete(const std::string &table, const std::string &key, int nums);
 
         void PrintStats();
-
-        void Close();
 
         ~HWDB();
 

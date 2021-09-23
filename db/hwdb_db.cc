@@ -97,7 +97,7 @@ namespace ycsbc {
         config_.kLeafCacheBucketSize = leaf_cache;
         config_.kLeafCacheBits = 8;  //
 
-        config_.kPlogClientType = 3;
+        config_.kPlogClientType = 4;
         config_.kLogDirectWrite = 1;
     
     }
@@ -204,9 +204,6 @@ namespace ycsbc {
         cout<<stats<<endl;
     }
 
-    void HWDB::Close() {
-        db_->interface.DebugPrint();
-    }
     HWDB::~HWDB() {
         DeleteHwdb(&db_);
     }

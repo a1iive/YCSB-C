@@ -10,8 +10,9 @@ LIB_SOURCES= \
 		lib/histogram.cc \
 
 ##HWDB
+HWDB_FLAGS= -I/home/hhs/hwdb/HW_KVSTORE/include
 HWDB_SOURCES= db/hwdb_db.cc
-HWDB_LIBRARY= -lhwdb
+HWDB_LIBRARY= /home/hhs/hwdb/HW_KVSTORE/libhwdb.a
 HWDB_DEFS= -DYCSB_HWDB
 HWDB_OBJECTS=$(HWDB_SOURCES:.cc=.o)
 ##
