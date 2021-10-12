@@ -31,17 +31,17 @@ namespace ycsbc {
         options->compression = rocksdb::kNoCompression;
         options->enable_pipelined_write = true;
 
-        options->max_background_jobs = 2;
-        // options->max_background_compactions = 1;
+        options->max_background_jobs = 8;
+        options->max_background_compactions = 4;
         // options->max_background_flushed = 1;
-        options->max_bytes_for_level_base = 32ul * 1024 * 1024;
-        options->write_buffer_size = 32ul * 1024 * 1024;
+        options->max_bytes_for_level_base = 512ul * 1024 * 1024;
+        options->write_buffer_size = 64ul * 1024 * 1024;
         options->max_write_buffer_number = 2;
-        options->target_file_size_base = 4ul * 1024 * 1024;
+        options->target_file_size_base = 32ul * 1024 * 1024;
 
-        options->level0_file_num_compaction_trigger = 4;
-        options->level0_slowdown_writes_trigger = 8;     
-        options->level0_stop_writes_trigger = 12;
+        options->level0_file_num_compaction_trigger = 8;
+        options->level0_slowdown_writes_trigger = 12;     
+        options->level0_stop_writes_trigger = 16;
 
         options->use_direct_reads = true;
         options->use_direct_io_for_flush_and_compaction = true;
@@ -86,6 +86,7 @@ namespace ycsbc {
         if(s.IsNotFound()){
             noResult++;
             //cerr<<"read not found:"<<noResult<<endl;
+            // cout << "read: " << key << endl;
             return DB::kOK;
         }else{
             cerr<<"read error"<<endl;
@@ -129,7 +130,6 @@ namespace ycsbc {
             cerr<<"insert error\n"<<endl;
             exit(0);
         }
-       
         return DB::kOK;
     }
 
@@ -156,6 +156,10 @@ namespace ycsbc {
         string stats;
         db_->GetProperty("rocksdb.stats",&stats);
         cout<<stats<<endl;
+        cout << "perf context:" << endl;
+                cout << "block_read_count: " << rocksdb::get_perf_context()->block_read_count << endl;
+                        cout << "block_read_time: " << rocksdb::get_perf_context()->block_read_time << endl;
+                                cout << "block_read_byte: " << rocksdb::get_perf_context()->block_read_byte << endl;
 
         if (dbstats_.get() != nullptr) {
             fprintf(stdout, "STATISTICS:\n%s\n", dbstats_->ToString().c_str());

@@ -10,7 +10,7 @@
 using namespace std;
 
 namespace ycsbc {
-
+    
     struct Data_S{   //适合hwdb的字符串
         char *data_;  //data前四个字节是size_,然后才是数据
 
@@ -19,6 +19,7 @@ namespace ycsbc {
         Data_S(const char *str){
             uint32_t size_ = strlen(str);
             data_ = new char[sizeof(uint32_t) + size_];
+            printf("Data_S invoked\n");
             uint32_t *len = (uint32_t *)data_;
             *len = size_;
             memcpy(data_ + sizeof(uint32_t), str, size_);
@@ -27,13 +28,17 @@ namespace ycsbc {
         Data_S(const std::string &str){
             uint32_t size_ = str.size();
             data_ = new char[sizeof(uint32_t) + size_];
+            printf("Data_S invoked\n");
             uint32_t *len = (uint32_t *)data_;
             *len = size_;
             memcpy(data_ + sizeof(uint32_t), str.c_str(), size_);
         }
 
         ~Data_S(){
-            if(data_ != nullptr)  delete []data_;
+            if(data_ != nullptr)  {
+                printf("~Data_S invoked\n");
+                delete []data_;
+            }
         }
 
         char *raw_data(){
@@ -70,7 +75,11 @@ namespace ycsbc {
         //
         SetDefaultHwdbConfig(&config_);
         strcpy(config_.fs_path, dbfilename);
-        config_.kLogMaxWriteSize = 128 * 1024 * 1024;  //
+        //config_.kMaxHopeBtreeNum = 10;
+        //config_.kMaxHopeBtreeLevel = 5;
+        //config_.kBtreeBufferKVTriggerCommit = 10000;
+
+        config_.kLogMaxWriteSize = 32 * 1024 * 1024;  //
         config_.kMaxPthreadNum = 8;
         config_.kPthreadDoFlushJobNum = 5;
         
@@ -97,7 +106,7 @@ namespace ycsbc {
         config_.kLeafCacheBucketSize = leaf_cache;
         config_.kLeafCacheBits = 8;  //
 
-        config_.kPlogClientType = 4;
+        config_.kPlogClientType = 3;
         config_.kLogDirectWrite = 1;
     
     }
@@ -113,7 +122,7 @@ namespace ycsbc {
             if(value == nullptr){
                 noResult++;
                 //cerr<<"read not found:"<<noResult<<endl;
-                //printf("read not find:key:%lu-%s\n",key.size(),key.c_str());
+                // printf("read not find:key:%lu-%s\n",key.size(),key.c_str());
                 return DB::kOK;
             }
             //printf("value:%lu\n",value.size());
@@ -167,8 +176,9 @@ namespace ycsbc {
         int s;
         string value = values.at(0).second;
         //SerializeValues(values,value);
-        /* printf("put:key:%lu-%s\n",key.size(),key.data());
-        for( auto kv : values) {
+        // printf("put:key:%lu-%s\n",key.size(),key.data());
+        /* 
+         * for( auto kv : values) {
             printf("put field:key:%lu-%s value:%lu-%s\n",kv.first.size(),kv.first.data(),kv.second.size(),kv.second.data());
         } */
         s = db_->interface.Putkv(db_->db, Data_S(key).raw_data(), Data_S(value).raw_data());
@@ -198,8 +208,8 @@ namespace ycsbc {
 
     void HWDB::PrintStats() {
         if(noResult) cout<<"read not found:"<<noResult<<endl;
-        char stats[4096];
-        memset(stats, 0, 4096);
+        char stats[409600];
+        memset(stats, 0, 409600);
         db_->interface.PrintStats(db_->db, (char *)&stats);
         cout<<stats<<endl;
     }
