@@ -25,6 +25,8 @@ using namespace std;
 ////statistics
 atomic<uint64_t> ops_cnt[ycsbc::Operation::READMODIFYWRITE + 1];    //操作个数
 atomic<uint64_t> ops_time[ycsbc::Operation::READMODIFYWRITE + 1];   //微秒
+atomic<uint64_t> time_now;// 现在
+atomic<uint64_t> ops_period[ycsbc::Operation::READMODIFYWRITE + 1];
 HistogramImpl hist_lat;
 ////
 
@@ -51,8 +53,8 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
         else if (next_report_ < 100000) next_report_ += 10000;
         else if (next_report_ < 500000) next_report_ += 50000;
         else                            next_report_ += 100000;
-        fprintf(stderr, "... finished %d ops%30s\r", i, "");
-        fflush(stderr);
+        //fprintf(stderr, "... finished %d ops%30s\r", i, "");
+        //fflush(stderr);
     }
     if (is_loading) {
       oks += client.DoInsert();
@@ -94,7 +96,8 @@ int main( const int argc, const char *argv[]) {
     // Loads data
     ycsbc::CoreWorkload wl;
     wl.Init(props);
-    
+    time_now = get_now_micros();
+
     db->Close(); // print sth to distinguish load and different run
 
     CreateHistogramImpl(&hist_lat);
@@ -131,6 +134,7 @@ int main( const int argc, const char *argv[]) {
     // Peforms transactions
     ycsbc::CoreWorkload wl;
     wl.Init(props);
+    time_now = get_now_micros();
 
     for(int j = 0; j < ycsbc::Operation::READMODIFYWRITE + 1; j++){
       ops_cnt[j].store(0);
@@ -184,6 +188,8 @@ int main( const int argc, const char *argv[]) {
       runfilenames.push_back(morerun.substr(start));
     }
     for(unsigned int i = 0; i < runfilenames.size(); i++){
+      time_now = get_now_micros();
+
       for(int j = 0; j < ycsbc::Operation::READMODIFYWRITE + 1; j++){
         ops_cnt[j].store(0);
         ops_time[j].store(0);

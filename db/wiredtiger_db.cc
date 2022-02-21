@@ -43,7 +43,7 @@ namespace ycsbc {
         uint64_t nums = stoi(props.GetProperty(CoreWorkload::RECORD_COUNT_PROPERTY));
         uint32_t key_len = stoi(props.GetProperty(CoreWorkload::KEY_LENGTH));
         uint32_t value_len = stoi(props.GetProperty(CoreWorkload::FIELD_LENGTH_PROPERTY));
-        uint32_t cache_size = nums * (key_len + value_len) * 10 / 100;
+        uint32_t cache_size = nums * (key_len + value_len) * 5 / 100;
         cache_size = max(cache_size, 1u * 1024 * 1024);
 
         std::stringstream conn_config;
@@ -57,8 +57,10 @@ namespace ycsbc {
         conn_config << ",cache_size=";
         conn_config << cache_size;
 
+	conn_config << ",eviction=(threads_max=4,threads_min=1)";
+
         // string checkpoint = ",checkpoint=(wait=60,log_size=2G)";
-        conn_config << ",checkpoint=(wait=120,log_size=2G)";
+        conn_config << ",checkpoint=(wait=60,log_size=2G)";
 
         // string extensions = ",extensions=[/usr/local/lib/libwiredtiger_snappy.so]";
         // conn_config += extensions;
@@ -83,9 +85,9 @@ namespace ycsbc {
         config << ",prefix_compression=false";
         config << ",checksum=on";
         
-        config << ",internal_page_max=16kb";
-        config << ",leaf_page_max=16kb";
-        config << ",memory_page_max=10MB";
+        config << ",internal_page_max=20kb";
+        config << ",leaf_page_max=20kb";
+        config << ",memory_page_max=20kb";
 
         // config << ",lsm=(";
         // config << ",chunk_size=20MB";
@@ -217,7 +219,7 @@ namespace ycsbc {
             suri << "statistics:" << uri_;
             conn_->open_session(conn_, NULL, NULL, &(session));
             session->open_cursor(session, suri.str().c_str(), NULL, "statistics=(all,clear)", &cursor);
-            int64_t app_insert, app_remove, app_update, fs_writes, log_writes;
+            int64_t app_insert, app_remove, app_update, fs_writes;
 
             get_stat(cursor, WT_STAT_DSRC_CURSOR_INSERT_BYTES, &app_insert);
             get_stat(cursor, WT_STAT_DSRC_CURSOR_REMOVE_BYTES, &app_remove);

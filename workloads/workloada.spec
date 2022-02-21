@@ -9,7 +9,7 @@ keylength=14
 fieldcount=1
 fieldlength=34
 
-recordcount=100000
+recordcount=10000000
 operationcount=100000
 workload=com.yahoo.ycsb.workloads.CoreWorkload
 

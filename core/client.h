@@ -21,8 +21,11 @@ using namespace std;
 
 extern atomic<uint64_t> ops_cnt[ycsbc::Operation::READMODIFYWRITE + 1] ;    //操作个数
 extern atomic<uint64_t> ops_time[ycsbc::Operation::READMODIFYWRITE + 1] ;   //微秒
+extern atomic<uint64_t> time_now;
+extern atomic<uint64_t> ops_period[ycsbc::Operation::READMODIFYWRITE + 1];
 extern HistogramImpl hist_lat;
 
+#define TIME_SEC 1000ul * 1000
 namespace ycsbc {
 
 class Client {
@@ -55,6 +58,17 @@ inline bool Client::DoInsert() {
   int status = db_.Insert(workload_.NextTable(), key, pairs, nums_);
   uint64_t end_time = get_now_micros();
   hist_lat.interface.Add(&hist_lat, end_time - start_time);
+  // iops period
+  ops_period[INSERT].fetch_add(1, std::memory_order_relaxed);
+  uint64_t now_time = time_now.load(std::memory_order_relaxed);
+  uint64_t period = end_time - now_time;
+  if (period > TIME_SEC) {
+    time_now.store(end_time);
+    double ops = (double)ops_period[INSERT].load(std::memory_order_relaxed);
+    fprintf(stderr, "iops: %.2f\n", ops * 1e6/period);
+    fflush(stderr);
+    ops_period[INSERT].store(0);
+  }
   return status == DB::kOK;
 }
 

@@ -15,13 +15,13 @@ namespace ycsbc {
         //set option
         rocksdb::Options options;
         SetOptions(&options, props);
-        
 
         rocksdb::Status s = rocksdb::DB::Open(options,dbfilename,&db_);
         if(!s.ok()){
             cerr<<"Can't open rocksdb "<<dbfilename<<" "<<s.ToString()<<endl;
             exit(0);
         }
+	rocksdb::SetPerfLevel(rocksdb::PerfLevel::kEnableTime);
     }
 
     void RocksDB::SetOptions(rocksdb::Options *options, utils::Properties &props) {
@@ -31,17 +31,17 @@ namespace ycsbc {
         options->compression = rocksdb::kNoCompression;
         options->enable_pipelined_write = true;
 
-        options->max_background_jobs = 8;
-        options->max_background_compactions = 4;
+        options->max_background_jobs = 4;
+        // options->max_background_compactions = 4;
         // options->max_background_flushed = 1;
-        options->max_bytes_for_level_base = 512ul * 1024 * 1024;
+        options->max_bytes_for_level_base = 256ul * 1024 * 1024;
         options->write_buffer_size = 64ul * 1024 * 1024;
         options->max_write_buffer_number = 2;
-        options->target_file_size_base = 32ul * 1024 * 1024;
+        options->target_file_size_base = 16ul * 1024 * 1024;
 
-        options->level0_file_num_compaction_trigger = 8;
-        options->level0_slowdown_writes_trigger = 12;     
-        options->level0_stop_writes_trigger = 16;
+        options->level0_file_num_compaction_trigger = 4;
+        options->level0_slowdown_writes_trigger = 8;     
+        options->level0_stop_writes_trigger = 12;
 
         options->use_direct_reads = true;
         options->use_direct_io_for_flush_and_compaction = true;
@@ -49,15 +49,19 @@ namespace ycsbc {
         uint64_t nums = stoi(props.GetProperty(CoreWorkload::RECORD_COUNT_PROPERTY));
         uint32_t key_len = stoi(props.GetProperty(CoreWorkload::KEY_LENGTH));
         uint32_t value_len = stoi(props.GetProperty(CoreWorkload::FIELD_LENGTH_PROPERTY));
-        uint32_t cache_size = nums * (key_len + value_len) * 10 / 100; //10%
+        uint32_t cache_size = nums * (key_len + value_len) * 5 / 100; //10%
         if(cache_size < 8 << 20){   //不小于8MB；
             cache_size = 8 << 20;
         }
-        cache_ = rocksdb::NewLRUCache(cache_size);
+        cache_ = rocksdb::NewLRUCache(cache_size, 6, false);
         rocksdb::BlockBasedTableOptions table_options;
+	table_options.cache_index_and_filter_blocks = true;
+	table_options.cache_index_and_filter_blocks_with_high_priority = true;
         table_options.block_cache = cache_;
         table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
-        // table_options.optimize_filters_for_memory = true;
+        table_options.block_size_deviation = 20;
+
+	// table_options.optimize_filters_for_memory = true;
         options->table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
 
         bool statistics = utils::StrToBool(props["dbstatistics"]);
@@ -156,14 +160,14 @@ namespace ycsbc {
         string stats;
         db_->GetProperty("rocksdb.stats",&stats);
         cout<<stats<<endl;
-        cout << "perf context:" << endl;
-                cout << "block_read_count: " << rocksdb::get_perf_context()->block_read_count << endl;
-                        cout << "block_read_time: " << rocksdb::get_perf_context()->block_read_time << endl;
-                                cout << "block_read_byte: " << rocksdb::get_perf_context()->block_read_byte << endl;
-
-        if (dbstats_.get() != nullptr) {
+        db_->ResetStats();
+	cout << "perf_context: " << endl;
+     	cout << rocksdb::get_perf_context()->ToString() << endl;	
+	rocksdb::get_perf_context()->Reset();
+	if (dbstats_.get() != nullptr) {
             fprintf(stdout, "STATISTICS:\n%s\n", dbstats_->ToString().c_str());
-        }
+            dbstats_->Reset();
+	}
     }
 
     RocksDB::~RocksDB() {

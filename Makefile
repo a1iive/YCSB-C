@@ -10,25 +10,25 @@ LIB_SOURCES= \
 		lib/histogram.cc \
 
 ##HWDB
-HWDB_FLAGS= -I/home/hhs/hwdb/HW_KVSTORE/include
+HWDB_FLAGS= -I/home/hhs/HW_KVSTORE/include
 HWDB_SOURCES= db/hwdb_db.cc
-HWDB_LIBRARY= /home/hhs/hwdb/HW_KVSTORE/libhwdb.a
+HWDB_LIBRARY= /home/hhs/HW_KVSTORE/libhwdb.a
 HWDB_DEFS= -DYCSB_HWDB
 HWDB_OBJECTS=$(HWDB_SOURCES:.cc=.o)
 ##
 
 ##rocksdb
-ROCKSDB_FLAGS= -I/home/hhs/hwdb/rocksdb/include
+ROCKSDB_FLAGS= -I/home/hhs/rocksdb/include
 ROCKSDB_SOURCES= db/rocksdb_db.cc
-ROCKSDB_LIBRARY= /home/hhs/hwdb/rocksdb/librocksdb.a -lbz2 -ldl -lz -lzstd -llz4 -lsnappy
+ROCKSDB_LIBRARY= /home/hhs/rocksdb/librocksdb.a -lbz2 -ldl -lz -lzstd -llz4 -lsnappy
 ROCKSDB_DEFS= -DYCSB_ROCKSDB
 ROCKSDB_OBJECTS=$(ROCKSDB_SOURCES:.cc=.o)
 ##
 
 ##wiredtiger
-WIREDTIGER_FLAGS= -I/home/hhs/hwdb/wiredtiger/build/include
+WIREDTIGER_FLAGS= -I/home/hhs/wiredtiger/build/include
 WIREDTIGER_SOURCES= db/wiredtiger_db.cc
-WIREDTIGER_LIBRARY= /home/hhs/hwdb/wiredtiger/build/lib/libwiredtiger.a -ldl
+WIREDTIGER_LIBRARY= /home/hhs/wiredtiger/build/lib/libwiredtiger.a -ldl
 WIREDTIGER_DEFS= -DYCSB_WIREDTIGER
 WIREDTIGER_OBJECTS=$(WIREDTIGER_SOURCES:.cc=.o)
 ##

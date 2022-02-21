@@ -19,7 +19,7 @@ namespace ycsbc {
         Data_S(const char *str){
             uint32_t size_ = strlen(str);
             data_ = new char[sizeof(uint32_t) + size_];
-            printf("Data_S invoked\n");
+            // printf("Data_S invoked\n");
             uint32_t *len = (uint32_t *)data_;
             *len = size_;
             memcpy(data_ + sizeof(uint32_t), str, size_);
@@ -28,7 +28,7 @@ namespace ycsbc {
         Data_S(const std::string &str){
             uint32_t size_ = str.size();
             data_ = new char[sizeof(uint32_t) + size_];
-            printf("Data_S invoked\n");
+            // printf("Data_S invoked\n");
             uint32_t *len = (uint32_t *)data_;
             *len = size_;
             memcpy(data_ + sizeof(uint32_t), str.c_str(), size_);
@@ -36,7 +36,7 @@ namespace ycsbc {
 
         ~Data_S(){
             if(data_ != nullptr)  {
-                printf("~Data_S invoked\n");
+                // printf("~Data_S invoked\n");
                 delete []data_;
             }
         }
@@ -77,10 +77,15 @@ namespace ycsbc {
         strcpy(config_.fs_path, dbfilename);
         //config_.kMaxHopeBtreeNum = 10;
         //config_.kMaxHopeBtreeLevel = 5;
-        //config_.kBtreeBufferKVTriggerCommit = 10000;
+        config_.kGeneralBtreeDegree = 10;
+	config_.kExpandTriggerPercent = 0.5;
+	config_.kBtreeBufferKVTriggerCommit = 10000; // 20000
 
-        config_.kLogMaxWriteSize = 32 * 1024 * 1024;  //
-        config_.kMaxPthreadNum = 8;
+        config_.kLogMaxWriteSize = 32 * 1024 * 1024;  //32
+	config_.kL0TableMaxNum = 12; //12
+	config_.kL0TableTriggerFlush = 6; //8
+	
+	config_.kMaxPthreadNum = 8;
         config_.kPthreadDoFlushJobNum = 5;
         
         uint64_t nums = stoi(props.GetProperty(CoreWorkload::RECORD_COUNT_PROPERTY));
@@ -95,8 +100,8 @@ namespace ycsbc {
         config_.kLeafBlockSize = leaf_size;
         config_.kLeafCacheItemSize = leaf_size;
 
-        uint64_t inner_cache = nums * (key_len + value_len) * 5 / 100 / inner_size;
-        uint64_t leaf_cache = nums * (key_len + value_len) * 5 / 100 / leaf_size;
+        uint64_t inner_cache = nums * (key_len + value_len) * 2.5 / 100 / inner_size;
+        uint64_t leaf_cache = nums * (key_len + value_len) * 2.5 / 100 / leaf_size;
         if(inner_cache < 4096) inner_cache = 4 * 4096;
         if(leaf_cache < 1024) leaf_cache = 16 * 1024;
 
@@ -108,7 +113,14 @@ namespace ycsbc {
 
         config_.kPlogClientType = 3;
         config_.kLogDirectWrite = 1;
-    
+   
+        config_.kPhysicalBlockAlignSize = 512;
+
+	//config_.kLeafPlogHashMapCap = 10000;
+        //config_.kInnerPlogHashMapCap = 100000;
+	//config_.kPlogNumTriggerGC = 500;
+	//config_.kPlogGCValidRecordPercentThreshold = 0.01;
+	//config_.kPlogGCAllocatedSpacePercentThreshold = 0.95;	
     }
 
 
