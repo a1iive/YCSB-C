@@ -53,8 +53,8 @@ int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
         else if (next_report_ < 100000) next_report_ += 10000;
         else if (next_report_ < 500000) next_report_ += 50000;
         else                            next_report_ += 100000;
-        //fprintf(stderr, "... finished %d ops%30s\r", i, "");
-        //fflush(stderr);
+        fprintf(stderr, "... finished %d ops%30s\r", i, "");
+        fflush(stderr);
     }
     if (is_loading) {
       oks += client.DoInsert();
@@ -131,10 +131,53 @@ int main( const int argc, const char *argv[]) {
     }
   } 
   if( run ) {
-    // Peforms transactions
     ycsbc::CoreWorkload wl;
     wl.Init(props);
+    int total = stoi(props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
+
+    while(total) {
     time_now = get_now_micros();
+
+    db->Close(); // print sth to distinguish load and different run
+
+    CreateHistogramImpl(&hist_lat);
+
+    actual_ops.clear();
+    uint64_t load_start = get_now_micros();
+    total_ops = 10000000;
+    for (int i = 0; i < num_threads; ++i) {
+      actual_ops.emplace_back(async(launch::async,
+          DelegateClient, db, &wl, total_ops / num_threads, true, i));
+    }
+    assert((int)actual_ops.size() == num_threads);
+
+    sum = 0;
+    for (auto &n : actual_ops) {
+      assert(n.valid());
+      sum += n.get();
+    }
+    uint64_t load_end = get_now_micros();
+    total -= sum;
+    uint64_t use_time = load_end - load_start;
+    char *hisstr = hist_lat.interface.ToString(&hist_lat);
+    printf("********** load result **********\n");
+    printf("loading records:%d  use time:%.3f s  IOPS:%.2f iops (%.2f us/op)\n", sum, 1.0 * use_time*1e-6, 1.0 * sum * 1e6 / use_time, 1.0 * use_time / sum);
+    printf("\n%s\n", hisstr);
+    free(hisstr);
+    printf("*********************************\n");
+
+    if ( print_stats ) {
+        printf("-------------- db statistics --------------\n");
+        db->PrintStats();
+        printf("-------------------------------------------\n");
+    }
+
+    // Peforms transactions
+    time_now = get_now_micros();
+
+    db->Close(); // print sth to distinguish load and different run
+
+    CreateHistogramImpl(&hist_lat);
 
     for(int j = 0; j < ycsbc::Operation::READMODIFYWRITE + 1; j++){
       ops_cnt[j].store(0);
@@ -142,7 +185,7 @@ int main( const int argc, const char *argv[]) {
     }
 
     actual_ops.clear();
-    total_ops = stoi(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
+    total_ops = 1000000;
     uint64_t run_start = get_now_micros();
     for (int i = 0; i < num_threads; ++i) {
       actual_ops.emplace_back(async(launch::async,
@@ -155,7 +198,7 @@ int main( const int argc, const char *argv[]) {
       sum += n.get();
     }
     uint64_t run_end = get_now_micros();
-    uint64_t use_time = run_end - run_start;
+    use_time = run_end - run_start;
 
     uint64_t temp_cnt[ycsbc::Operation::READMODIFYWRITE + 1];
     uint64_t temp_time[ycsbc::Operation::READMODIFYWRITE + 1];
@@ -164,7 +207,7 @@ int main( const int argc, const char *argv[]) {
       temp_cnt[j] = ops_cnt[j].load(std::memory_order_relaxed);
       temp_time[j] = ops_time[j].load(std::memory_order_relaxed);
     }
-
+    hisstr = hist_lat.interface.ToString(&hist_lat);
     printf("********** run result **********\n");
     printf("all opeartion records:%d  use time:%.3f s  IOPS:%.2f iops (%.2f us/op)\n\n", sum, 1.0 * use_time*1e-6, 1.0 * sum * 1e6 / use_time, 1.0 * use_time / sum);
     if ( temp_cnt[ycsbc::INSERT] )          printf("insert ops:%7lu  use time:%7.3f s  IOPS:%7.2f iops (%.2f us/op)\n", temp_cnt[ycsbc::INSERT], 1.0 * temp_time[ycsbc::INSERT]*1e-6, 1.0 * temp_cnt[ycsbc::INSERT] * 1e6 / temp_time[ycsbc::INSERT], 1.0 * temp_time[ycsbc::INSERT] / temp_cnt[ycsbc::INSERT]);
@@ -172,7 +215,11 @@ int main( const int argc, const char *argv[]) {
     if ( temp_cnt[ycsbc::UPDATE] )          printf("update ops:%7lu  use time:%7.3f s  IOPS:%7.2f iops (%.2f us/op)\n", temp_cnt[ycsbc::UPDATE], 1.0 * temp_time[ycsbc::UPDATE]*1e-6, 1.0 * temp_cnt[ycsbc::UPDATE] * 1e6 / temp_time[ycsbc::UPDATE], 1.0 * temp_time[ycsbc::UPDATE] / temp_cnt[ycsbc::UPDATE]);
     if ( temp_cnt[ycsbc::SCAN] )            printf("scan ops  :%7lu  use time:%7.3f s  IOPS:%7.2f iops (%.2f us/op)\n", temp_cnt[ycsbc::SCAN], 1.0 * temp_time[ycsbc::SCAN]*1e-6, 1.0 * temp_cnt[ycsbc::SCAN] * 1e6 / temp_time[ycsbc::SCAN], 1.0 * temp_time[ycsbc::SCAN] / temp_cnt[ycsbc::SCAN]);
     if ( temp_cnt[ycsbc::READMODIFYWRITE] ) printf("rmw ops   :%7lu  use time:%7.3f s  IOPS:%7.2f iops (%.2f us/op)\n", temp_cnt[ycsbc::READMODIFYWRITE], 1.0 * temp_time[ycsbc::READMODIFYWRITE]*1e-6, 1.0 * temp_cnt[ycsbc::READMODIFYWRITE] * 1e6 / temp_time[ycsbc::READMODIFYWRITE], 1.0 * temp_time[ycsbc::READMODIFYWRITE] / temp_cnt[ycsbc::READMODIFYWRITE]);
+    printf("\n%s\n", hisstr);
+    free(hisstr);
     printf("********************************\n");
+    
+    }
   }
   if( !morerun.empty() ) {
     vector<string> runfilenames;
