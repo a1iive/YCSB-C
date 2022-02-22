@@ -65,8 +65,8 @@ inline bool Client::DoInsert() {
   if (period > TIME_SEC) {
     time_now.store(end_time);
     double ops = (double)ops_period[INSERT].load(std::memory_order_relaxed);
-    fprintf(stderr, "iops: %.2f\n", ops * 1e6/period);
-    fflush(stderr);
+    //fprintf(stderr, "iops: %.2f\n", ops * 1e6/period);
+    //fflush(stderr);
     ops_period[INSERT].store(0);
   }
   return status == DB::kOK;
