@@ -185,7 +185,7 @@ int main( const int argc, const char *argv[]) {
     }
 
     actual_ops.clear();
-    total_ops = 1000000;
+    total_ops = 10000000;
     uint64_t run_start = get_now_micros();
     for (int i = 0; i < num_threads; ++i) {
       actual_ops.emplace_back(async(launch::async,
