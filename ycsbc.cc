@@ -134,7 +134,7 @@ int main( const int argc, const char *argv[]) {
     ycsbc::CoreWorkload wl;
     wl.Init(props);
     int total = stoi(props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
-
+    int done = 0;
     while(total) {
     time_now = get_now_micros();
 
@@ -158,6 +158,7 @@ int main( const int argc, const char *argv[]) {
     }
     uint64_t load_end = get_now_micros();
     total -= sum;
+    done += sum;
     uint64_t use_time = load_end - load_start;
     char *hisstr = hist_lat.interface.ToString(&hist_lat);
     printf("********** load result **********\n");
@@ -166,13 +167,7 @@ int main( const int argc, const char *argv[]) {
     free(hisstr);
     printf("*********************************\n");
 
-    if ( print_stats ) {
-        printf("-------------- db statistics --------------\n");
-        db->PrintStats();
-        printf("-------------------------------------------\n");
-    }
-
-    // Peforms transactions
+        // Peforms transactions
     time_now = get_now_micros();
 
     db->Close(); // print sth to distinguish load and different run
@@ -183,9 +178,10 @@ int main( const int argc, const char *argv[]) {
       ops_cnt[j].store(0);
       ops_time[j].store(0);
     }
-
+    
+    wl.ReInit(props, done);
     actual_ops.clear();
-    total_ops = 10000000;
+    total_ops = stoi(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
     uint64_t run_start = get_now_micros();
     for (int i = 0; i < num_threads; ++i) {
       actual_ops.emplace_back(async(launch::async,
@@ -218,7 +214,13 @@ int main( const int argc, const char *argv[]) {
     printf("\n%s\n", hisstr);
     free(hisstr);
     printf("********************************\n");
-    
+    if ( print_stats ) {
+        printf("-------------- db statistics --------------\n");
+        db->PrintStats();
+        printf("-------------------------------------------\n");
+    }
+
+
     }
   }
   if( !morerun.empty() ) {

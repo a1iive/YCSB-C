@@ -143,7 +143,8 @@ class CoreWorkload {
   /// Called once, in the main client thread, before any operations are started.
   ///
   virtual void Init(const utils::Properties &p);
-  
+  virtual void ReInit(const utils::Properties &p, size_t record_count);
+
   virtual void BuildValues(std::vector<ycsbc::DB::KVPair> &values);
   virtual void BuildUpdate(std::vector<ycsbc::DB::KVPair> &update);
   virtual std::string BuildMaxKey();

@@ -15,7 +15,7 @@ fi
 cmd="./ycsbc -db hwdb -dbpath $dbpath -threads 1 -P $workload -load true -morerun $moreworkloads -dbstatistics true >>out.out 2>&1 "
 
 if [ -n "$1" ];then    #后台运行
-cmd="nohup ./ycsbc -db hwdb -dbpath $dbpath -threads 1 -P $workload -run true  >$1 2>&1  &"
+cmd="nohup ./ycsbc -db hwdb -dbpath $dbpath -threads 16 -P $workload -run true  >$1 2>&1  &"
 #cmd="nohup ./ycsbc -db hwdb -dbpath $dbpath -threads 4 -P $workload -load true -dbstatistics true >>$1 2>&1  &"
 echo $cmd >$1
 fi

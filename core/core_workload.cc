@@ -171,6 +171,35 @@ void CoreWorkload::Init(const utils::Properties &p) {
   }
 }
 
+void CoreWorkload::ReInit(const utils::Properties &p, size_t record_count) {
+  std::string request_dist = p.GetProperty(REQUEST_DISTRIBUTION_PROPERTY,
+                                           REQUEST_DISTRIBUTION_DEFAULT);
+  double insert_proportion = std::stod(p.GetProperty(INSERT_PROPORTION_PROPERTY,
+                                                     INSERT_PROPORTION_DEFAULT));
+  if (key_chooser_) {
+    delete key_chooser_;
+  } 
+  if (request_dist == "uniform") {
+    key_chooser_ = new UniformGenerator(0, record_count - 1);
+    
+  } else if (request_dist == "zipfian") {
+    // If the number of keys changes, we don't want to change popular keys.
+    // So we construct the scrambled zipfian generator with a keyspace
+    // that is larger than what exists at the beginning of the test.
+    // If the generator picks a key that is not inserted yet, we just ignore it
+    // and pick another key.
+    int op_count = std::stoi(p.GetProperty(OPERATION_COUNT_PROPERTY));
+    int new_keys = (int)(op_count * insert_proportion * 2); // a fudge factor
+    key_chooser_ = new ScrambledZipfianGenerator(record_count + new_keys);
+    
+  } else if (request_dist == "latest") {
+    key_chooser_ = new SkewedLatestGenerator(insert_key_sequence_);
+    
+  } else {
+    throw utils::Exception("Unknown request distribution: " + request_dist);
+  }
+}
+
 ycsbc::Generator<uint64_t> *CoreWorkload::GetFieldLenGenerator(
     const utils::Properties &p) {
   string field_len_dist = p.GetProperty(FIELD_LENGTH_DISTRIBUTION_PROPERTY,

@@ -21,7 +21,7 @@ cmd="./ycsbc -db rocksdb -dbpath $dbpath -threads 4 -P $workload -load true -mor
 
 if [ -n "$1" ];then    #后台运行
 #cmd="nohup ./ycsbc -db rocksdb -dbpath $dbpath -threads 4 -P $workload -load true -dbstatistics true >>$1 2>&1  &"
-cmd="nohup ./ycsbc -db rocksdb -dbpath $dbpath -threads 1 -P $workload -run true >>$1 2>&1  &"
+cmd="nohup ./ycsbc -db rocksdb -dbpath $dbpath -threads 16 -P $workload -run true -dbstatistics true >>$1 2>&1  &"
 echo $cmd >$1
 fi
 
