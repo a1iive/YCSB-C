@@ -47,7 +47,8 @@ namespace ycsbc {
         options->use_direct_io_for_flush_and_compaction = true;
 
         uint64_t nums = stoi(props.GetProperty(CoreWorkload::RECORD_COUNT_PROPERTY));
-        uint32_t key_len = stoi(props.GetProperty(CoreWorkload::KEY_LENGTH));
+        //uint64_t nums = 200000000;
+	uint32_t key_len = stoi(props.GetProperty(CoreWorkload::KEY_LENGTH));
         uint32_t value_len = stoi(props.GetProperty(CoreWorkload::FIELD_LENGTH_PROPERTY));
         uint32_t cache_size = nums * (key_len + value_len) * 5 / 100; //10%
         if(cache_size < 8 << 20){   //不小于8MB；

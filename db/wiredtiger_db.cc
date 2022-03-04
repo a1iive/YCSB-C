@@ -41,9 +41,10 @@ namespace ycsbc {
     std::string WiredTiger::SetConnOptions(utils::Properties &props) {
         //
         uint64_t nums = stoi(props.GetProperty(CoreWorkload::RECORD_COUNT_PROPERTY));
-        uint32_t key_len = stoi(props.GetProperty(CoreWorkload::KEY_LENGTH));
+        //uint64_t nums = 200000000;
+	uint32_t key_len = stoi(props.GetProperty(CoreWorkload::KEY_LENGTH));
         uint32_t value_len = stoi(props.GetProperty(CoreWorkload::FIELD_LENGTH_PROPERTY));
-        uint32_t cache_size = nums * (key_len + value_len) * 5 / 100;
+        uint32_t cache_size = nums * (key_len + value_len) * 7 / 100;
         cache_size = max(cache_size, 1u * 1024 * 1024);
 
         std::stringstream conn_config;
@@ -85,9 +86,9 @@ namespace ycsbc {
         config << ",prefix_compression=false";
         config << ",checksum=on";
         
-        config << ",internal_page_max=20kb";
-        config << ",leaf_page_max=20kb";
-        config << ",memory_page_max=20kb";
+        config << ",internal_page_max=8kb";
+        config << ",leaf_page_max=8kb";
+        config << ",memory_page_max=8kb";
 
         // config << ",lsm=(";
         // config << ",chunk_size=20MB";

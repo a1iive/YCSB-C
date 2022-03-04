@@ -89,7 +89,8 @@ namespace ycsbc {
         config_.kPthreadDoFlushJobNum = 5;
         
         uint64_t nums = stoi(props.GetProperty(CoreWorkload::RECORD_COUNT_PROPERTY));
-        uint32_t key_len = stoi(props.GetProperty(CoreWorkload::KEY_LENGTH));
+        //uint64_t nums = 200000000;
+	uint32_t key_len = stoi(props.GetProperty(CoreWorkload::KEY_LENGTH));
         uint32_t value_len = stoi(props.GetProperty(CoreWorkload::FIELD_LENGTH_PROPERTY));
 
         uint32_t inner_size = 512;
