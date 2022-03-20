@@ -107,12 +107,15 @@ namespace ycsbc {
         std::string val;
         std::string k;
         //printf("len:%d\n",len);
-        for(int i=0;i < len && it->Valid(); i++){
+	int i = 0;
+        for(;i < len && it->Valid(); i++){
             k = it->key().ToString();
             val = it->value().ToString();
             //printf("i:%d key:%lu value:%lu\n",i,k.size(),val.size());
             it->Next();
-        } 
+            if (k > max_key) break;
+	} 
+	cout << "Scan length: " << i << endl;
         delete it;
         return DB::kOK;
     }
